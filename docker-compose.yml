@@ -1,0 +1,38 @@
+services:
+  ollama:
+    image: ollama/ollama:latest
+    container_name: rag-ollama
+    volumes:
+      - ollama-models:/root/.ollama
+    ports:
+      - "11434:11434"
+    healthcheck:
+      test: ["CMD", "ollama", "list"]
+      interval: 10s
+      timeout: 30s
+      retries: 10
+      start_period: 40s
+    deploy:
+      resources:
+        limits:
+          cpus: '4'
+          memory: '8G'
+
+  rag-app:
+    build: .
+    container_name: rag-streamlit
+    ports:
+      - "8501:8501"
+    volumes:
+      - "./rag doc:/app/pdfs"
+      - "./chroma_db:/app/chroma_db"
+    environment:
+      - PYTHONUNBUFFERED=1
+      - OLLAMA_BASE_URL=http://ollama:11434
+      - OLLAMA_MODEL=qwen2.5:7b
+    depends_on:
+      ollama:
+        condition: service_healthy
+
+volumes:
+  ollama-models:
